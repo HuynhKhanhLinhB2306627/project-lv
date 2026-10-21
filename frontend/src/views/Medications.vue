@@ -25,7 +25,54 @@
       </div>
     </div>
 
-    
+    <!-- Banner Kết nối Thông báo Telegram -->
+    <div class="mb-4">
+      <!-- Đã kết nối -->
+      <div v-if="telegramStatus.connected" class="p-3 p-md-4 rounded-4 shadow-sm border border-success border-opacity-25 bg-success bg-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 animate-fade-in">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 48px; height: 48px;">
+            <i class="bi bi-telegram fs-3"></i>
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <h6 class="fw-bold mb-0 text-theme-main">Đã kích hoạt nhắc nhở qua Telegram</h6>
+              <span class="badge bg-success rounded-pill px-2" style="font-size: 0.7rem;">Đang hoạt động</span>
+            </div>
+            <p class="small text-theme-muted mb-0 mt-1">
+              Hệ thống sẽ tự động gửi thông báo đẩy đến tài khoản Telegram của bạn (Mã Chat ID: <strong>#{{ telegramStatus.chatId }}</strong>) trước 30 phút mỗi cữ thuốc.
+            </p>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+          <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold bg-theme-card shadow-sm" @click="sendTelegramTest" :disabled="testingTelegram">
+            <span v-if="testingTelegram" class="spinner-border spinner-border-sm me-1"></span>
+            <i v-else class="bi bi-bell-fill me-1"></i> Bắn thông báo thử
+          </button>
+          <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold bg-theme-card shadow-sm" @click="disconnectTelegram">
+            <i class="bi bi-x-circle me-1"></i> Hủy liên kết
+          </button>
+        </div>
+      </div>
+
+      <!-- Chưa kết nối -->
+      <div v-else class="p-3 p-md-4 rounded-4 shadow-sm border border-theme bg-theme-card d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 animate-fade-in">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style="width: 48px; height: 48px;">
+            <i class="bi bi-telegram fs-3"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-0 text-theme-main">Bật nhắc nhở uống thuốc tức thì qua Telegram (Miễn phí)</h6>
+            <p class="small text-theme-muted mb-0 mt-1">
+              Đừng bỏ lỡ cữ thuốc nào! Nhận thông báo đẩy riêng tư trực tiếp trên điện thoại trước 30 phút mỗi lần uống.
+            </p>
+          </div>
+        </div>
+        <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm flex-shrink-0 hover-scale" @click="openTelegramModal">
+          <i class="bi bi-link-45deg me-1"></i> Kết nối Telegram (1 chạm)
+        </button>
+      </div>
+    </div>
+
     <div class="bg-theme-card border border-theme shadow-sm rounded-4 overflow-hidden mb-4">
       <div class="card-header bg-theme-card border-0 p-0">
         <ul class="nav nav-tabs nav-justified border-0 custom-tabs border-bottom border-theme">
@@ -318,6 +365,74 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal Kết nối Telegram -->
+    <div v-if="showTelegramModal" class="modal-overlay d-flex align-items-center justify-content-center p-3 animate-fade-in" @click.self="showTelegramModal = false" style="z-index: 2200;">
+      <div class="bg-theme-card rounded-4 shadow-lg w-100 border border-theme overflow-hidden" style="max-width: 480px;">
+        <div class="modal-header border-0 bg-primary text-white p-3 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-telegram fs-4"></i>
+            <h6 class="modal-title fw-bold mb-0">Kết nối Trợ lý Telegram</h6>
+          </div>
+          <button class="btn-close btn-close-white" @click="showTelegramModal = false"></button>
+        </div>
+
+        <div class="p-4 bg-theme-card">
+          <div class="text-center mb-4">
+            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center mb-2" style="width: 64px; height: 64px;">
+              <i class="bi bi-bell-fill fs-2"></i>
+            </div>
+            <h6 class="fw-bold text-theme-main mb-1">Nhận thông báo nhắc thuốc 24/7</h6>
+            <p class="small text-theme-muted mb-0">Chỉ mất 5 giây với 2 bước cực kỳ đơn giản:</p>
+          </div>
+
+          <!-- Bước 1 -->
+          <div class="p-3 rounded-3 bg-theme-light border border-theme mb-3">
+            <div class="d-flex align-items-start gap-2">
+              <span class="badge bg-primary rounded-circle px-2 py-1">1</span>
+              <div class="flex-grow-1">
+                <div class="fw-bold small text-theme-main">Mở Bot và bấm nút START</div>
+                <p class="extra-small text-theme-muted mb-2">Bấm nút bên dưới để mở ứng dụng Telegram, sau đó bấm nút <strong>START</strong> ở đáy màn hình chat.</p>
+                <a :href="telegramStatus.botInviteLink" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-sm">
+                  <i class="bi bi-box-arrow-up-right"></i> Mở Telegram ngay
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bước 2 -->
+          <div class="p-3 rounded-3 bg-theme-light border border-theme mb-4">
+            <div class="d-flex align-items-start gap-2">
+              <span class="badge bg-success rounded-circle px-2 py-1">2</span>
+              <div class="flex-grow-1">
+                <div class="fw-bold small text-theme-main">Xác nhận hoàn tất</div>
+                <p class="extra-small text-theme-muted mb-2">Sau khi đã bấm START trên Telegram, bấm nút bên dưới để hệ thống nhận diện:</p>
+                <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm w-100" @click="connectTelegramAuto" :disabled="connectingTelegram">
+                  <span v-if="connectingTelegram" class="spinner-border spinner-border-sm me-1"></span>
+                  <i v-else class="bi bi-check2-circle me-1"></i> Tôi đã bấm START rồi (Hoàn tất kết nối)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tùy chọn nhập thủ công Chat ID -->
+          <div class="border-top border-theme pt-3">
+            <a href="#" class="extra-small text-theme-muted text-decoration-none d-flex align-items-center justify-content-between" @click.prevent="showManualInput = !showManualInput">
+              <span>Hoặc tự nhập mã Telegram Chat ID</span>
+              <i class="bi" :class="showManualInput ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </a>
+            <div v-if="showManualInput" class="mt-2">
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control bg-theme-light text-theme-main border-theme" v-model="manualChatId" placeholder="VD: 7942650831">
+                <button class="btn btn-outline-primary fw-bold" @click="connectTelegramManual" :disabled="!manualChatId.trim() || connectingTelegram">
+                  Lưu ID
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -341,6 +456,19 @@ const showAddMedicineModal = ref(false);
 const submitting = ref(false);
 const requesting = ref(false);
 const editingId = ref(null);
+
+// Telegram Reminder Integration State
+const telegramStatus = ref({
+  connected: false,
+  chatId: null,
+  botUsername: 'Suc_khoe_dien_tu_Bot',
+  botInviteLink: 'https://t.me/Suc_khoe_dien_tu_Bot'
+});
+const showTelegramModal = ref(false);
+const showManualInput = ref(false);
+const manualChatId = ref('');
+const connectingTelegram = ref(false);
+const testingTelegram = ref(false);
 
 const isDarkMode = computed(() => document.documentElement.getAttribute('data-bs-theme') === 'dark');
 
@@ -594,7 +722,89 @@ const getCourseProgress = (course) => {
   return Math.round((current / total) * 100);
 };
 
-onMounted(fetchData);
+// Telegram Methods
+const fetchTelegramStatus = async () => {
+  try {
+    const res = await axios.get('/api/telegram/status');
+    if (res.data.success) {
+      telegramStatus.value = res.data;
+    }
+  } catch (err) {
+    console.error('Lỗi lấy trạng thái Telegram', err);
+  }
+};
+
+const openTelegramModal = () => {
+  showTelegramModal.value = true;
+  manualChatId.value = '';
+  showManualInput.value = false;
+};
+
+const connectTelegramAuto = async () => {
+  connectingTelegram.value = true;
+  try {
+    const res = await axios.post('/api/telegram/connect', {});
+    if (res.data.success) {
+      toast.success(res.data.message || 'Kết nối Telegram thành công!');
+      showTelegramModal.value = false;
+      await fetchTelegramStatus();
+    }
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Chưa tìm thấy tin nhắn START từ bạn trên Telegram.');
+  } finally {
+    connectingTelegram.value = false;
+  }
+};
+
+const connectTelegramManual = async () => {
+  if (!manualChatId.value.trim()) return;
+  connectingTelegram.value = true;
+  try {
+    const res = await axios.post('/api/telegram/connect', { chatId: manualChatId.value.trim() });
+    if (res.data.success) {
+      toast.success(res.data.message || 'Kết nối Telegram thành công!');
+      showTelegramModal.value = false;
+      manualChatId.value = '';
+      await fetchTelegramStatus();
+    }
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Lỗi khi lưu Telegram Chat ID.');
+  } finally {
+    connectingTelegram.value = false;
+  }
+};
+
+const disconnectTelegram = async () => {
+  if (!confirm('Bạn có chắc muốn hủy nhận thông báo qua Telegram không?')) return;
+  try {
+    const res = await axios.post('/api/telegram/disconnect');
+    if (res.data.success) {
+      toast.success('Đã hủy liên kết Telegram.');
+      await fetchTelegramStatus();
+    }
+  } catch (err) {
+    toast.error('Lỗi khi hủy liên kết.');
+  }
+};
+
+const sendTelegramTest = async () => {
+  testingTelegram.value = true;
+  try {
+    const res = await axios.post('/api/telegram/test');
+    if (res.data.success) {
+      toast.success(res.data.message || 'Đã gửi thông báo kiểm tra đến Telegram!');
+    }
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Lỗi khi gửi thông báo test.');
+  } finally {
+    testingTelegram.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchData();
+  fetchTelegramStatus();
+});
 </script>
 
 <style scoped>

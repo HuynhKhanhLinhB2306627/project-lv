@@ -26,6 +26,9 @@ public class User {
 
     private String address;
 
+    @Column(name = "telegram_chat_id")
+    private String telegramChatId;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -66,6 +69,8 @@ public class User {
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+    public String getTelegramChatId() { return telegramChatId; }
+    public void setTelegramChatId(String telegramChatId) { this.telegramChatId = telegramChatId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public Role getRole() { return role; }

@@ -20,6 +20,9 @@ public class ReminderSchedulerService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private TelegramNotificationService telegramService;
+
     @Scheduled(fixedRate = 60000) 
     @Transactional
     public void checkAndSendReminders() {
@@ -46,6 +49,17 @@ public class ReminderSchedulerService {
                     String timeStr = reminder.getReminderTime().format(DateTimeFormatter.ofPattern("HH:mm"));
 
                     emailService.sendMedicationReminder(email, profileName, medicineName, dosage, timing, timeStr);
+
+                    // Gửi thông báo đẩy qua Telegram nếu người dùng đã liên kết
+                    com.healthrecord.healthrecord.entity.User user = reminder.getMedicationCourse().getHealthProfile().getUser();
+                    if (user != null && user.getTelegramChatId() != null && !user.getTelegramChatId().isBlank()) {
+                        try {
+                            System.out.println("[Scheduler] Gửi nhắc nhở Telegram cho chat_id: " + user.getTelegramChatId());
+                            telegramService.sendMedicationReminder(user.getTelegramChatId(), profileName, medicineName, dosage, timing, timeStr);
+                        } catch (Exception te) {
+                            System.err.println("[Scheduler] Lỗi gửi Telegram: " + te.getMessage());
+                        }
+                    }
                     
                     reminder.setNotified(true);
                     reminderRepository.save(reminder);
