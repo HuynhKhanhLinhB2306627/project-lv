@@ -155,9 +155,6 @@ public class TelegramNotificationService {
     }
 
     private String escapeHtml(String text) {
-        if (text == null) return "";
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;");
+        return text != null ? org.springframework.web.util.HtmlUtils.htmlEscape(text) : "";
     }
 }

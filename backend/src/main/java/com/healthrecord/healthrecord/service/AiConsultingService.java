@@ -215,27 +215,6 @@ public class AiConsultingService {
         aiChatSessionRepository.deleteAll(sessions);
     }
 
-    public String suggestPost(String title, String content) {
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            throw new RuntimeException("Chưa cấu hình Gemini API key.");
-        }
-
-        String prompt = "Bạn là trợ lý viết bài cho diễn đàn sức khỏe. Hãy giúp tôi hoàn thiện bài viết sau đây.\n"
-                + "Tiêu đề: " + (title != null ? title : "") + "\n"
-                + "Nội dung thô: " + (content != null ? content : "") + "\n\n"
-                + "Yêu cầu:\n"
-                + "- Chỉnh sửa lại tiêu đề cho thu hút và chuyên nghiệp hơn.\n"
-                + "- Mở rộng và trau chuốt lại nội dung để hữu ích và dễ đọc hơn.\n"
-                + "- Sử dụng giọng văn tư vấn nhẹ nhàng, đồng cảm.\n"
-                + "- Chỉ trả về kết quả là nội dung bài viết đã hoàn chỉnh (bao gồm cả tiêu đề mới nếu cần), không kèm lời nhắn khác.";
-
-        try {
-            return callGemini(prompt);
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi khi gọi AI suggest: " + e.getMessage());
-        }
-    }
-
     public String callGemini(String prompt) throws Exception {
         int maxRetries = 2; 
         int retryDelayMs = 2000; 
@@ -591,19 +570,7 @@ public class AiConsultingService {
     }
 
     private String cleanupModelText(String text) {
-        if (text == null) {
-            return "";
-        }
-        String cleaned = text.trim();
-        if (cleaned.startsWith("```json")) {
-            cleaned = cleaned.substring(7).trim();
-        } else if (cleaned.startsWith("```")) {
-            cleaned = cleaned.substring(3).trim();
-        }
-        if (cleaned.endsWith("```")) {
-            cleaned = cleaned.substring(0, cleaned.length() - 3).trim();
-        }
-        return cleaned;
+        return MedicalDocumentExtractionService.cleanupModelText(text);
     }
 
     private String safe(String value) {

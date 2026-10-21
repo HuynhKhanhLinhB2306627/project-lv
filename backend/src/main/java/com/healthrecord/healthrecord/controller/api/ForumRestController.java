@@ -297,19 +297,6 @@ public class ForumRestController {
         return ResponseEntity.ok(Map.of("success", true));
     }
 
-    // Gợi ý nội dung bài viết
-    @PostMapping("/ai/suggest-post")
-    public ResponseEntity<?> suggestPost(@RequestBody Map<String, String> payload) {
-        try {
-            String title = payload.get("title");
-            String content = payload.get("content");
-            String suggestion = aiConsultingService.suggestPost(title, content);
-            return ResponseEntity.ok(Map.of("success", true, "suggestion", suggestion));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
-        }
-    }
-
     private PostResponseDto convertToDto(Post post, User currentUser) {
         PostResponseDto dto = new PostResponseDto();
         dto.setId(post.getId());

@@ -1,18 +1,9 @@
 import pandas as pd
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from src.config import SEED, BATCH_SIZE, NUM_WORKERS, FEATURE_COLUMNS, TARGET_COLUMN
-
-class CardioDataset(Dataset):
-    def __init__(self, X, y):
-        self.X = X
-        self.y = y
-    def __len__(self):
-        return len(self.X)
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
 
 def load_and_clean_data(csv_path):
     df = pd.read_csv(csv_path, sep=";")
@@ -72,8 +63,8 @@ def prepare_dataloaders(X, y):
     y_val = torch.tensor(y_val, dtype=torch.long)
     y_test = torch.tensor(y_test, dtype=torch.long)
     
-    train_loader = DataLoader(CardioDataset(X_train, y_train), batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
-    val_loader = DataLoader(CardioDataset(X_val, y_val), batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
-    test_loader = DataLoader(CardioDataset(X_test, y_test), batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+    train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+    val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
+    test_loader = DataLoader(TensorDataset(X_test, y_test), batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
     
     return train_loader, val_loader, test_loader, scaler

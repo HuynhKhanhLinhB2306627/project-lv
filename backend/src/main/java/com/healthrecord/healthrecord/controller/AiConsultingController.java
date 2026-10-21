@@ -26,20 +26,8 @@ public class AiConsultingController {
     }
 
     private Long parseProfileId(Object rawValue) {
-        if (rawValue == null) {
-            return null;
-        }
-        if (rawValue instanceof Number) {
-            return ((Number) rawValue).longValue();
-        }
-        try {
-            String value = rawValue.toString().trim();
-            if (value.isEmpty()) {
-                return null;
-            }
-            return Long.parseLong(value);
-        } catch (NumberFormatException ex) {
-            return null;
-        }
+        if (rawValue == null) return null;
+        if (rawValue instanceof Number n) return n.longValue();
+        try { return Long.parseLong(rawValue.toString().trim()); } catch (Exception e) { return null; }
     }
 }
