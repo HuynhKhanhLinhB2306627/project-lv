@@ -119,19 +119,22 @@ public class AiConsultingService {
         EmergencyCheck emergencyCheck = evaluateEmergency(normalizedQuestion);
         if (emergencyCheck.isEmergency()) {
             AiAdviceResponse emergencyRes = AiAdviceResponse.emergency(emergencyCheck.getMessage(), profile.getId(), accessLevel.name());
+            emergencyRes.setSessionId(session != null ? session.getId() : null);
             saveAiResponseToHistory(session, emergencyRes);
             return emergencyRes;
         }
 
         String healthContext = buildHealthContext(profile, accessLevel);
-        String prompt = buildPrompt(normalizedQuestion, healthContext, accessLevel);
+        String prompt = buildPrompt(normalizedQuestion, healthContext, accessLevel, session);
 
         if (apiKey == null || apiKey.trim().isEmpty()) {
-            return AiAdviceResponse.systemError(
+            AiAdviceResponse errRes = AiAdviceResponse.systemError(
                     "Chưa cấu hình Gemini API key. Hãy đặt biến môi trường GEMINI_API_KEY trước khi dùng AI.",
                     profile.getId(),
                     accessLevel.name()
             );
+            errRes.setSessionId(session != null ? session.getId() : null);
+            return errRes;
         }
 
         try {
@@ -141,7 +144,6 @@ public class AiConsultingService {
             response.setAccessLevel(accessLevel.name());
             response.setSuccess(true);
             response.setSessionId(session != null ? session.getId() : null);
-            
             
             saveAiResponseToHistory(session, response);
             
@@ -156,11 +158,13 @@ public class AiConsultingService {
             } else if (e.getMessage() != null && (e.getMessage().contains("503") || e.getMessage().contains("UNAVAILABLE") || e.getMessage().contains("high demand"))) {
                 errorMsg = "Hệ thống AI đang quá tải. Vui lòng thử lại sau ít phút. 🙏";
             }
-            return AiAdviceResponse.systemError(
+            AiAdviceResponse errRes = AiAdviceResponse.systemError(
                     errorMsg,
                     profile.getId(),
                     accessLevel.name()
             );
+            errRes.setSessionId(session != null ? session.getId() : null);
+            return errRes;
         }
     }
 
@@ -496,26 +500,52 @@ public class AiConsultingService {
         }
     }
 
-    private String buildPrompt(String userQuestion, String healthContext, ProfileAccess.AccessLevel accessLevel) {
-        return "Bạn là trợ lý tư vấn sức khỏe AI cho ứng dụng quản lý hồ sơ y tế.\n"
-                + "Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, thực tế.\n"
-                + "Không được trả HTML, không markdown, không code block.\n"
-                + "Không chẩn đoán xác định. Không kê đơn mới. Không tự suy diễn dữ liệu thiếu.\n"
-                + "Nếu có dấu hiệu cần khám, phải nói rõ khi nào nên đi khám.\n"
-                + "Mức quyền của người hỏi với hồ sơ này là: " + accessLevel.name() + "\n"
-                + "\nTHÔNG TIN HỒ SƠ:\n"
-                + healthContext + "\n"
-                + "\nCÂU HỎI NGƯỜI DÙNG:\n"
-                + userQuestion + "\n\n"
-                + "Hãy trả kết quả DUY NHẤT dưới dạng JSON hợp lệ với schema sau:\n"
-                + "{\n"
-                + "  \"answer\": \"...\",\n"
-                + "  \"recommendations\": [\"...\", \"...\"],\n"
-                + "  \"warningSigns\": [\"...\"],\n"
-                + "  \"seekMedicalHelp\": true,\n"
-                + "  \"disclaimer\": \"...\"\n"
-                + "}\n"
-                + "Nếu không đủ dữ liệu, vẫn phải trả JSON đúng schema và nói rõ dữ liệu nào còn thiếu.";
+    private String buildPrompt(String userQuestion, String healthContext, ProfileAccess.AccessLevel accessLevel, AiChatSession session) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Bạn là trợ lý tư vấn sức khỏe AI cho ứng dụng quản lý hồ sơ y tế.\n")
+          .append("Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, thực tế.\n")
+          .append("Không được trả HTML, không markdown, không code block.\n")
+          .append("Không chẩn đoán xác định. Không kê đơn mới. Không tự suy diễn dữ liệu thiếu.\n")
+          .append("Nếu có dấu hiệu cần khám, phải nói rõ khi nào nên đi khám.\n")
+          .append("Mức quyền của người hỏi với hồ sơ này là: ").append(accessLevel.name()).append("\n\n")
+          .append("THÔNG TIN HỒ SƠ:\n")
+          .append(healthContext).append("\n");
+
+        if (session != null && session.getMessages() != null && session.getMessages().size() > 1) {
+            sb.append("\n[LỊCH SỬ HỘI THOẠI TRONG PHIÊN NÀY]:\n");
+            List<AiChatMessage> history = session.getMessages();
+            int end = history.size() - 1; // Tin nhắn hiện tại ở cuối danh sách
+            int start = Math.max(0, end - 6);
+            for (int i = start; i < end; i++) {
+                AiChatMessage m = history.get(i);
+                if (m.getRole() == AiChatMessage.Role.USER) {
+                    sb.append("- Người dùng: ").append(m.getContent()).append("\n");
+                } else if (m.getRole() == AiChatMessage.Role.BOT) {
+                    String botContent = m.getContent();
+                    if (botContent != null && botContent.trim().startsWith("{")) {
+                        try {
+                            JsonNode node = objectMapper.readTree(botContent);
+                            botContent = node.path("content").asText(botContent);
+                        } catch (Exception ignored) {}
+                    }
+                    sb.append("- AI: ").append(botContent).append("\n");
+                }
+            }
+        }
+
+        sb.append("\nCÂU HỎI HIỆN TẠI CỦA NGƯỜI DÙNG:\n")
+          .append(userQuestion).append("\n\n")
+          .append("Hãy trả kết quả DUY NHẤT dưới dạng JSON hợp lệ với schema sau:\n")
+          .append("{\n")
+          .append("  \"answer\": \"...\",\n")
+          .append("  \"recommendations\": [\"...\", \"...\"],\n")
+          .append("  \"warningSigns\": [\"...\"],\n")
+          .append("  \"seekMedicalHelp\": true,\n")
+          .append("  \"disclaimer\": \"...\"\n")
+          .append("}\n")
+          .append("Nếu không đủ dữ liệu, vẫn phải trả JSON đúng schema và nói rõ dữ liệu nào còn thiếu.");
+
+        return sb.toString();
     }
 
     private EmergencyCheck evaluateEmergency(String question) {

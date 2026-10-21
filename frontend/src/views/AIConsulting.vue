@@ -22,7 +22,7 @@
           <div v-else class="list-group list-group-flush gap-1">
             <div v-for="s in sessions" :key="s.id" 
                  class="list-group-item list-group-item-action border border-transparent rounded-3 p-2 session-item px-3 d-flex align-items-center justify-content-between"
-                 :class="{ 'active-session shadow-sm': currentSessionId === s.id }"
+                 :class="{ 'active-session shadow-sm': Number(currentSessionId) === Number(s.id) }"
                  @click="selectSession(s.id)">
               <div class="flex-grow-1 overflow-hidden me-2">
                 <div class="fw-medium small text-truncate text-theme-main">{{ s.title }}</div>
@@ -196,7 +196,12 @@ const fetchInitialData = async () => {
     ]);
     profiles.value = profRes.data.myProfiles || [];
     if (profiles.value.length > 0) selectedProfileId.value = profiles.value[0].id;
-    sessions.value = sessionRes.data;
+    sessions.value = sessionRes.data || [];
+
+    // Tự động mở phiên gần nhất nếu có lịch sử và chưa chọn phiên nào
+    if (sessions.value.length > 0 && !currentSessionId.value) {
+      await selectSession(sessions.value[0].id);
+    }
   } catch (err) { console.error(err); }
 };
 
@@ -212,6 +217,8 @@ const selectSession = async (id) => {
     chatHistory.value = res.data.messages.map(m => ({
       role: m.role.toLowerCase(),
       content: m.content,
+      recommendations: m.recommendations || [],
+      warningSigns: m.warningSigns || [],
       time: formatDateShort(m.date)
     }));
     nextTick(scrollToBottom);
@@ -240,7 +247,7 @@ const deleteAllSessions = async () => {
 const askAi = async () => {
   if (!userQuestion.value.trim() || isTyping.value) return;
 
-  const question = userQuestion.value;
+  const question = userQuestion.value.trim();
   chatHistory.value.push({ role: 'user', content: question, time: 'Vừa xong' });
   userQuestion.value = '';
   if (textareaRef.value) textareaRef.value.style.height = 'auto';
@@ -255,17 +262,20 @@ const askAi = async () => {
     });
 
     const data = res.data;
-    if (data.sessionId && !currentSessionId.value) {
+    if (data.sessionId) {
+      const wasNew = !currentSessionId.value;
       currentSessionId.value = data.sessionId;
-      const sessionRes = await axios.get('/api/community/chat-sessions');
-      sessions.value = sessionRes.data;
+      if (wasNew) {
+        const sessionRes = await axios.get('/api/community/chat-sessions');
+        sessions.value = sessionRes.data || [];
+      }
     }
 
     chatHistory.value.push({ 
       role: 'bot', 
       content: data.answer,
-      recommendations: data.recommendations,
-      warningSigns: data.warningSigns,
+      recommendations: data.recommendations || [],
+      warningSigns: data.warningSigns || [],
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     });
   } catch (err) {
