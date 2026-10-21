@@ -6,9 +6,12 @@ import com.healthrecord.healthrecord.entity.Category;
 import com.healthrecord.healthrecord.entity.Comment;
 import com.healthrecord.healthrecord.entity.Post;
 import com.healthrecord.healthrecord.entity.User;
-
+import com.healthrecord.healthrecord.entity.AiChatSession;
+import com.healthrecord.healthrecord.service.AiConsultingService;
 import com.healthrecord.healthrecord.service.ForumService;
 import com.healthrecord.healthrecord.util.SecurityUtils;
+import com.healthrecord.healthrecord.entity.AiChatMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +35,8 @@ public class ForumRestController {
     @Autowired
     private com.healthrecord.healthrecord.repository.PostRepository postRepository;
 
+    @Autowired
+    private AiConsultingService aiConsultingService;
 
     @GetMapping("/posts")
     @Transactional(readOnly = true)
@@ -233,6 +238,77 @@ public class ForumRestController {
         return ResponseEntity.ok(Map.of("id", currentUser.getId(), "fullName", currentUser.getFullName()));
     }
 
+    // Lấy danh sách phiên tư vấn AI
+    @GetMapping("/chat-sessions")
+    public ResponseEntity<?> getChatSessions() {
+        return ResponseEntity.ok(aiConsultingService.getUserChatSessions().stream().map(s -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", s.getId());
+            map.put("title", s.getTitle());
+            map.put("date", s.getCreatedAt());
+            return map;
+        }).collect(Collectors.toList()));
+    }
+
+    // Lấy chi tiết một phiên tư vấn
+    @GetMapping("/chat-sessions/{id}")
+    public ResponseEntity<?> getChatSessionDetails(@PathVariable Long id) {
+        AiChatSession session = aiConsultingService.getSessionById(id);
+        if (session == null) return ResponseEntity.notFound().build();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", session.getId());
+        response.put("title", session.getTitle());
+        response.put("messages", session.getMessages().stream().map(m -> {
+            Map<String, Object> msg = new HashMap<>();
+            msg.put("role", m.getRole().name());
+            msg.put("date", m.getCreatedAt());
+            
+            if (m.getRole() == AiChatMessage.Role.BOT && m.getContent() != null && m.getContent().trim().startsWith("{")) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    Map<String, Object> data = mapper.readValue(m.getContent(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                    msg.put("content", data.get("content"));
+                    msg.put("warningSigns", data.get("warningSigns"));
+                    msg.put("recommendations", data.get("recommendations"));
+                } catch (Exception e) {
+                    msg.put("content", m.getContent());
+                }
+            } else {
+                msg.put("content", m.getContent());
+            }
+            return msg;
+        }).collect(Collectors.toList()));
+        
+        return ResponseEntity.ok(response);
+    }
+
+    // Xoá một phiên tư vấn
+    @DeleteMapping("/chat-sessions/{id}")
+    public ResponseEntity<?> deleteChatSession(@PathVariable Long id) {
+        aiConsultingService.deleteSession(id);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    // Xoá tất cả phiên tư vấn
+    @DeleteMapping("/chat-sessions")
+    public ResponseEntity<?> deleteAllChatSessions() {
+        aiConsultingService.deleteAllUserSessions();
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    // Gợi ý nội dung bài viết
+    @PostMapping("/ai/suggest-post")
+    public ResponseEntity<?> suggestPost(@RequestBody Map<String, String> payload) {
+        try {
+            String title = payload.get("title");
+            String content = payload.get("content");
+            String suggestion = aiConsultingService.suggestPost(title, content);
+            return ResponseEntity.ok(Map.of("success", true, "suggestion", suggestion));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 
     private PostResponseDto convertToDto(Post post, User currentUser) {
         PostResponseDto dto = new PostResponseDto();

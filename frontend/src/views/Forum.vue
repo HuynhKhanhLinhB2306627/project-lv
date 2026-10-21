@@ -267,7 +267,12 @@
               </div>
             </div>
 
-
+            
+            <button class="btn btn-ai-suggest animate-pulse shadow-sm" @click="handleAiSuggest" :disabled="aiLoading || (!newPost.title.trim() && !newPost.content.trim())">
+              <i v-if="aiLoading" class="spinner-border spinner-border-sm me-1"></i>
+              <i v-else class="bi bi-magic me-1"></i>
+              {{ aiLoading ? 'AI đang viết...' : 'AI hỗ trợ viết' }}
+            </button>
           </div>
 
           <select v-model="newPost.categoryId" class="form-select border border-theme bg-theme-light rounded-3 mb-3 fw-bold text-primary shadow-sm">
@@ -481,7 +486,7 @@ const viewingSaved = ref(false);
 const posts = ref([]);
 const loading = ref(true);
 const createLoading = ref(false);
-
+const aiLoading = ref(false);
 const showCreateModal = ref(false);
 const selectedPost = ref(null);
 const postComments = ref([]);
@@ -622,6 +627,23 @@ const openEditModal = (post) => {
   showCreateModal.value = true;
 };
 
+const handleAiSuggest = async () => {
+  if (!newPost.title.trim() && !newPost.content.trim()) return;
+  aiLoading.value = true;
+  try {
+    const res = await axios.post('/api/ai/suggest-post', {
+      title: newPost.title,
+      content: newPost.content
+    });
+    if (res.data.suggestion) {
+      newPost.content = res.data.suggestion;
+    }
+  } catch (err) {
+    toast.error("AI tạm thời không khả dụng: " + (err.response?.data || err.message));
+  } finally {
+    aiLoading.value = false;
+  }
+};
 
 const handleImageUpload = (e) => {
   const file = e.target.files[0];
@@ -655,9 +677,13 @@ const submitPost = async () => {
     let res;
     if (isEditMode.value) {
       formData.append('removeImage', removeImageOnEdit.value);
-      res = await axios.post(`/api/community/post/${editingPostId.value}/update`, formData);
+      res = await axios.post(`/api/community/post/${editingPostId.value}/update`, formData, { 
+        headers: { 'Content-Type': 'multipart/form-data' } 
+      });
     } else {
-      res = await axios.post('/api/community/posts/create', formData);
+      res = await axios.post('/api/community/posts/create', formData, { 
+        headers: { 'Content-Type': 'multipart/form-data' } 
+      });
     }
 
     if (res.data.success) {
