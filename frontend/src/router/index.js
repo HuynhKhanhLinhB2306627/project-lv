@@ -3,7 +3,7 @@ import MainLayout from '../layouts/MainLayout.vue'
 import Home from '../views/Home.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Appointments from '../views/Appointments.vue'
-
+import AIPrediction from '../views/AIPrediction.vue'
 import Profile from '../views/Profile.vue'
 import Forum from '../views/Forum.vue'
 import Chat from '../views/Chat.vue'
@@ -68,6 +68,12 @@ const routes = [
         component: () => import('../views/Medications.vue'),
         meta: { title: 'Lịch uống thuốc' }
       },
+      {
+        path: 'ai-prediction',
+        name: 'AIPrediction',
+        component: AIPrediction,
+        meta: { title: 'Dự đoán Tim mạch AI' }
+      },
 
       {
         path: 'forum',
@@ -104,6 +110,18 @@ const routes = [
         name: 'BodyMetrics',
         component: () => import('../views/BodyMetrics.vue'),
         meta: { title: 'Theo dõi chỉ số cơ thể' }
+      },
+      {
+        path: 'ai-consulting',
+        name: 'AIConsulting',
+        component: () => import('../views/AIConsulting.vue'),
+        meta: { title: 'Tư vấn sức khỏe AI' }
+      },
+      {
+        path: 'facilities',
+        name: 'FacilitiesMap',
+        component: () => import('../views/FacilitiesMap.vue'),
+        meta: { title: 'Bản đồ Y tế' }
       },
 
 

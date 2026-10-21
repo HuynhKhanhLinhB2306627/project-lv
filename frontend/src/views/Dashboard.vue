@@ -106,7 +106,7 @@
           
           <div class="mt-5">
             <div class="d-flex justify-content-between align-items-center mb-4">
-              <h5 class="fw-bold mb-0 text-theme-main"><i class="bi bi-graph-up text-success me-2"></i>Chỉ số BMI & Cân nặng</h5>
+              <h5 class="fw-bold mb-0 text-theme-main"><i class="bi bi-graph-up text-success me-2"></i>Chỉ số BMI</h5>
               <router-link to="/body-metrics" class="btn btn-sm btn-link text-decoration-none p-0 text-primary fw-bold">Xem chi tiết <i class="bi bi-arrow-right"></i></router-link>
             </div>
             <div class="dashboard-chart-wrap">
@@ -213,7 +213,6 @@ const chartData = computed(() => {
   
   const labels = [...stats.value.chartLabels].reverse();
   const bmiData = [...stats.value.chartBmis].reverse();
-  const weightData = [...stats.value.chartWeights].reverse();
 
   return {
     labels: labels,
@@ -226,15 +225,6 @@ const chartData = computed(() => {
         tension: 0.3,
         pointRadius: 4,
         yAxisID: 'y'
-      },
-      {
-        label: 'Cân nặng (kg)',
-        borderColor: '#0d6efd',
-        backgroundColor: '#0d6efd',
-        data: weightData,
-        tension: 0.3,
-        pointRadius: 4,
-        yAxisID: 'y1'
       }
     ]
   };
@@ -256,13 +246,6 @@ const chartOptions = computed(() => {
         display: true,
         position: 'left',
         grid: { color: gridColor },
-        ticks: { color: textColor }
-      },
-      y1: {
-        type: 'linear',
-        display: true,
-        position: 'right',
-        grid: { drawOnChartArea: false },
         ticks: { color: textColor }
       },
       x: {

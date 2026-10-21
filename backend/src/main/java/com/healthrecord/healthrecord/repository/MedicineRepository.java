@@ -11,6 +11,8 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
     
     boolean existsByName(String name);
 
+    java.util.Optional<Medicine> findByNameIgnoreCase(String name);
+
     
     List<Medicine> findByIsApprovedTrue();
 

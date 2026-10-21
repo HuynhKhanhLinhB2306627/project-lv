@@ -23,7 +23,8 @@
       </main>
     </div>
 
-    
+    <!-- AI Chat Widget -->
+    <AiChatWidget />
 
   </div>
 </template>
@@ -34,6 +35,7 @@ import axios from 'axios';
 import AppSidebar from '../components/layout/AppSidebar.vue';
 import AppHeader from '../components/layout/AppHeader.vue';
 import AppFooter from '../components/layout/AppFooter.vue';
+import AiChatWidget from '../components/AiChatWidget.vue';
 
 
 const showMobileMenu = ref(false);

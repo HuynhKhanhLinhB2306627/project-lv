@@ -29,6 +29,9 @@
         <router-link to="/body-metrics" class="nav-link-custom" active-class="active" title="Chỉ số cơ thể">
           <i class="bi bi-activity"></i> <span v-if="!isCollapsed">Chỉ số cơ thể</span>
         </router-link>
+        <router-link to="/ai-prediction" class="nav-link-custom" active-class="active" title="Dự đoán Tim mạch">
+          <i class="bi bi-robot"></i> <span v-if="!isCollapsed">AI Dự đoán tim mạch</span>
+        </router-link>
         
         <div class="nav-label text-muted small fw-bold px-3 mb-2 mt-3" v-if="!isCollapsed">Y TẾ & LỊCH TRÌNH</div>
         <router-link to="/appointments" class="nav-link-custom" active-class="active" title="Lịch hẹn khám">
@@ -54,6 +57,9 @@
         </router-link>
         <router-link to="/insurance" class="nav-link-custom" active-class="active" title="Bảo hiểm">
           <i class="bi bi-card-checklist"></i> <span v-if="!isCollapsed">Bảo hiểm y tế</span>
+        </router-link>
+        <router-link to="/facilities" class="nav-link-custom" active-class="active" title="Bản đồ Y tế">
+          <i class="bi bi-geo-alt-fill"></i> <span v-if="!isCollapsed">Bản đồ Y tế</span>
         </router-link>
 
       </nav>

@@ -11,8 +11,11 @@
             </select>
           </div>
         </div>
-        <div class="col-12 col-md-4 d-grid">
-          <button v-if="canEdit" class="btn btn-primary shadow-sm rounded-pill px-3" @click="openCreateModal">
+        <div class="col-12 col-md-4 d-flex gap-2">
+          <router-link :to="{ path: '/documents', query: { profileId: selectedProfileId } }" class="btn btn-outline-primary shadow-sm rounded-pill px-3 fw-bold flex-grow-1 text-nowrap d-flex align-items-center justify-content-center">
+            <i class="bi bi-magic me-1"></i> Quét tài liệu
+          </router-link>
+          <button v-if="canEdit" class="btn btn-primary shadow-sm rounded-pill px-3 fw-bold flex-grow-1 text-nowrap" @click="openCreateModal">
             <i class="bi bi-plus-circle me-1"></i> Ghi nhận mới
           </button>
         </div>

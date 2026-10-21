@@ -35,6 +35,10 @@
         <i class="bi bi-card-checklist"></i>
         <span v-if="!isCollapsed">Bảo hiểm y tế</span>
       </router-link>
+      <router-link to="/facilities" class="nav-item" title="Bản đồ Y tế">
+        <i class="bi bi-geo-alt-fill"></i>
+        <span v-if="!isCollapsed">Bản đồ Y tế</span>
+      </router-link>
 
 
       <router-link to="/forum" class="nav-item" title="Diễn đàn">
