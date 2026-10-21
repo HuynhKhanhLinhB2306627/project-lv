@@ -10,7 +10,9 @@ public interface DocumentService {
 
     List<Document> findAllDocumentsByProfileId(Long profileId);
 
-    void saveDocument(DocumentDto documentDto) throws IOException;
+    Document saveDocument(DocumentDto documentDto) throws IOException;
+
+    Document updateDocument(Document document);
 
     Document findDocumentById(Long id);
 

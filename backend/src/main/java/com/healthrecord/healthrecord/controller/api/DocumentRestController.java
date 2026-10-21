@@ -28,6 +28,7 @@ public class DocumentRestController {
     @Autowired private DocumentService documentService;
     @Autowired private HealthProfileService healthProfileService;
     @Autowired private ProfileAccessService profileAccessService;
+    @Autowired private com.healthrecord.healthrecord.service.MedicalDocumentExtractionService medicalDocumentExtractionService;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -66,14 +67,147 @@ public class DocumentRestController {
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(@RequestParam("profileId") Long profileId,
                                            @RequestParam("documentName") String documentName,
-                                           @RequestParam("file") MultipartFile file) {
+                                           @RequestParam("file") MultipartFile file,
+                                           @RequestParam(value = "autoExtract", defaultValue = "false") boolean autoExtract) {
         try {
             DocumentDto dto = new DocumentDto();
             dto.setProfileId(profileId);
             dto.setDocumentName(documentName);
             dto.setFile(file);
-            documentService.saveDocument(dto);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Tải lên tài liệu thành công."));
+            Document savedDoc = documentService.saveDocument(dto);
+
+            if (savedDoc != null && autoExtract) {
+                try {
+                    savedDoc = medicalDocumentExtractionService.extractDocument(savedDoc.getId());
+                } catch (Exception ex) {
+                    System.err.println("Auto extract failed: " + ex.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Tải lên tài liệu thành công.",
+                    "document", savedDoc != null ? convertToDto(savedDoc) : null
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/extract")
+    public ResponseEntity<?> extractDocument(@PathVariable Long id) {
+        try {
+            Document document = documentService.findDocumentById(id);
+            if (document == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Không tìm thấy tài liệu hoặc không có quyền truy cập."));
+            }
+
+            Document extracted = medicalDocumentExtractionService.extractDocument(id);
+            return ResponseEntity.ok(Map.of(
+                    "success", extracted.getExtractionStatus() == Document.ExtractionStatus.COMPLETED,
+                    "message", extracted.getExtractionStatus() == Document.ExtractionStatus.COMPLETED ? "Trích xuất tài liệu thành công!" : "Trích xuất thất bại: " + extracted.getErrorMessage(),
+                    "document", convertToDto(extracted)
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/extraction-result")
+    public ResponseEntity<?> getExtractionResult(@PathVariable Long id) {
+        Document document = documentService.findDocumentById(id);
+        if (document == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Không tìm thấy tài liệu."));
+        }
+        return ResponseEntity.ok(convertToDto(document));
+    }
+
+    @PostMapping("/{id}/apply-to-metrics")
+    public ResponseEntity<?> applyToMetrics(
+            @PathVariable Long id, 
+            @RequestParam(required = false) Long targetProfileId,
+            @RequestBody(required = false) Map<String, Object> customMetrics) {
+        try {
+            Map<String, Object> result = medicalDocumentExtractionService.applyToBodyMetrics(id, targetProfileId, customMetrics);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/apply-to-medications")
+    public ResponseEntity<?> applyToMedications(
+            @PathVariable Long id, 
+            @RequestParam(required = false) Long targetProfileId,
+            @RequestBody(required = false) List<Map<String, Object>> customMedications) {
+        try {
+            Map<String, Object> result = medicalDocumentExtractionService.applyToMedications(id, targetProfileId, customMedications);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/apply-to-appointment")
+    public ResponseEntity<?> applyToAppointment(
+            @PathVariable Long id, 
+            @RequestParam(required = false) Long targetProfileId,
+            @RequestBody(required = false) Map<String, Object> customAppointment) {
+        try {
+            Map<String, Object> result = medicalDocumentExtractionService.applyToAppointment(id, targetProfileId, customAppointment);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/apply-auto")
+    public ResponseEntity<?> applyAuto(@PathVariable Long id, @RequestParam(required = false) Long targetProfileId) {
+        try {
+            Document document = documentService.findDocumentById(id);
+            if (document == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Không tìm thấy tài liệu."));
+            }
+
+            if (document.getDocumentType() == Document.DocumentType.LAB_TEST) {
+                return ResponseEntity.ok(medicalDocumentExtractionService.applyToBodyMetrics(id, targetProfileId));
+            } else if (document.getDocumentType() == Document.DocumentType.PRESCRIPTION) {
+                return ResponseEntity.ok(medicalDocumentExtractionService.applyToMedications(id, targetProfileId));
+            } else if (document.getDocumentType() == Document.DocumentType.MEDICAL_EXAM) {
+                return ResponseEntity.ok(medicalDocumentExtractionService.applyToAppointment(id, targetProfileId));
+            } else {
+                // Thử áp dụng lần lượt nếu có dữ liệu tương ứng
+                try {
+                    return ResponseEntity.ok(medicalDocumentExtractionService.applyToBodyMetrics(id, targetProfileId));
+                } catch (Exception e1) {
+                    try {
+                        return ResponseEntity.ok(medicalDocumentExtractionService.applyToMedications(id, targetProfileId));
+                    } catch (Exception e2) {
+                        return ResponseEntity.ok(medicalDocumentExtractionService.applyToAppointment(id, targetProfileId));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/change-profile")
+    public ResponseEntity<?> changeProfile(
+            @PathVariable Long id, 
+            @RequestParam(required = false) Long targetProfileId,
+            @RequestParam(required = false) Long newProfileId) {
+        try {
+            Long finalProfileId = targetProfileId != null ? targetProfileId : newProfileId;
+            if (finalProfileId == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Thiếu ID hồ sơ đích (targetProfileId)."));
+            }
+            Document doc = medicalDocumentExtractionService.changeDocumentProfile(id, finalProfileId);
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Đã chuyển tài liệu sang hồ sơ mới thành công!",
+                    "document", convertToDto(doc)
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
@@ -95,6 +229,18 @@ public class DocumentRestController {
         dto.setDocumentName(document.getDocumentName());
         dto.setFilePath(document.getFilePath());
         dto.setUploadDate(document.getUploadDate());
+        dto.setDocumentType(document.getDocumentType() != null ? document.getDocumentType().name() : null);
+        dto.setExtractionStatus(document.getExtractionStatus() != null ? document.getExtractionStatus().name() : null);
+        dto.setSummary(document.getSummary());
+        dto.setExtractedJson(document.getExtractedJson());
+        dto.setIsApplied(document.getIsApplied());
+        dto.setErrorMessage(document.getErrorMessage());
+        dto.setOcrRawText(document.getOcrRawText());
+
+        if (document.getHealthProfile() != null) {
+            dto.setProfileId(document.getHealthProfile().getId());
+            dto.setProfileName(document.getHealthProfile().getFullName());
+        }
         return dto;
     }
 }

@@ -74,7 +74,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
-    public void saveDocument(DocumentDto dto) throws IOException {
+    public Document saveDocument(DocumentDto dto) throws IOException {
         
         HealthProfile profile = validateProfileAccess(dto.getProfileId(), true);
         if (profile == null) {
@@ -82,7 +82,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         MultipartFile file = dto.getFile();
-        if (file == null || file.isEmpty()) return;
+        if (file == null || file.isEmpty()) return null;
 
         
         
@@ -103,7 +103,13 @@ public class DocumentServiceImpl implements DocumentService {
         document.setFilePath(storedFileName); 
         document.setHealthProfile(profile);
 
-        documentRepository.save(document);
+        return documentRepository.save(document);
+    }
+
+    @Override
+    @Transactional
+    public Document updateDocument(Document document) {
+        return documentRepository.save(document);
     }
 
     @Override
